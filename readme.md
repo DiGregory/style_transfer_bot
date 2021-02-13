@@ -7,4 +7,4 @@
 
 
 ## Пример работы
- Пример работы можно посмотреть [тут](https://t.me/Style_transfer_simple_bot)
+ Бот развернут на google cloud platform, пример работы можно посмотреть [тут](https://t.me/Style_transfer_simple_bot)
