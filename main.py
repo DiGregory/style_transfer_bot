@@ -2,7 +2,7 @@ import logging
 import gc
 from aiogram import Bot, Dispatcher, executor, types
 from style_transfer import style_transfer_class
-API_TOKEN = '1688704069:AAEa-YKCUKOEH73vYRFCug9dho6kEI64r28'
+API_TOKEN = 'token'
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
