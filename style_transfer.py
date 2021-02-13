@@ -54,10 +54,7 @@ class StyleLoss(nn.Module):
         return input
 
     def gram_matrix(self, input):
-        batch_size, h, w, f_map_num = input.size()  # batch size(=1)
-        # b=number of feature maps
-        # (h,w)=dimensions of a feature map (N=h*w)
-
+        batch_size, h, w, f_map_num = input.size()
         features = input.view(batch_size * h, w * f_map_num)  # resise F_XL into \hat F_XL
 
         G = torch.mm(features, features.t())  # compute the gram product
@@ -68,7 +65,11 @@ class StyleLoss(nn.Module):
 
 
 class style_transfer_class():
-    def __init__(self,content_img_src, style_img_src,   output_name, imsize=128):
+    def __init__(self,content_img_src, style_img_src,   output_name, imsize=None):
+        if imsize==None:
+            im = Image.open(style_img_src)
+            (width, height) = im.size
+            imsize=min(width,height)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.loader = transforms.Compose([
             transforms.Resize(imsize),  # нормируем размер изображения
@@ -84,7 +85,7 @@ class style_transfer_class():
         self.content_layers_default = ['conv_4']
         self.style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
-        self.cnn = models.alexnet(pretrained=True).features.to(self.device).eval()
+        self.cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
 
     def get_style_model_and_losses(self, cnn, normalization_mean, normalization_std,
                                    style_img, content_img):
@@ -141,7 +142,7 @@ class style_transfer_class():
                 style_losses.append(style_loss)
 
         # now we trim off the layers after the last content and style losses
-        # выбрасываем все уровни после последенего styel loss или content loss
+        # выбрасываем все уровни после последенего style loss или content loss
         for i in range(len(model) - 1, -1, -1):
             if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
                 break
@@ -152,7 +153,6 @@ class style_transfer_class():
 
     def get_input_optimizer(self, input_img):
         # this line to show that input is a parameter that requires a gradient
-        # добоваляет содержимое тензора катринки в список изменяемых оптимизатором параметров
         optimizer = optim.LBFGS([input_img.requires_grad_()])
         return optimizer
 
@@ -163,7 +163,7 @@ class style_transfer_class():
                                                                               self.normalization_mean,
                                                                               self.normalization_std,
                                                                               self.style_img, self.content_img)
-        num_steps = 500
+        num_steps = 150
         style_weight = 100000
         content_weight = 1
         input_img = self.content_img.clone()
@@ -174,8 +174,6 @@ class style_transfer_class():
         while run[0] <= num_steps:
 
             def closure():
-                # correct the values
-                # это для того, чтобы значения тензора картинки не выходили за пределы [0;1]
                 input_img.data.clamp_(0, 1)
 
                 optimizer.zero_grad()
@@ -217,35 +215,11 @@ class style_transfer_class():
         input_img = unloader(input_img)
         input_img.save(self.output_name)
 
-        # plt.imsave(input_img, self.output_name)
-        # return input_img
-
     def image_loader(self, image_name):
         image = Image.open(image_name)
         image = self.loader(image).unsqueeze(0)
         return image.to(self.device, torch.float)
 
-    def imshow(self, tensor, title=None):
-        unloader = transforms.ToPILImage()
-        image = tensor.cpu().clone()
-        image = image.squeeze(0)
-        image = unloader(image)
-        plt.imshow(image)
-        if title is not None:
-            plt.title(title)
-        plt.pause(0.001)
 
-    def get_images(self):
-        # тензор в картинку
 
-        plt.ion()
-
-        # отрисовка
-
-        plt.figure()
-        self.imshow(self.style_img, title='Style Image')
-
-        plt.figure()
-        self.imshow(self.content_img, title='Content Image')
-        # return self.style_img,self.content_img
 
